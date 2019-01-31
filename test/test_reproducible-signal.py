@@ -15,5 +15,6 @@ def test_reproducible_signal():
         stdout=subprocess.PIPE, universal_newlines=True, bufsize=1
     )
     for line in popen.stdout:
-        last_line = line.strip()
-    assert last_line == "APKs match!"
+        current_line = line.strip()
+        print(current_line)
+    assert current_line == "APKs match!"

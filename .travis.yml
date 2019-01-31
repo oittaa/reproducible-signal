@@ -7,6 +7,7 @@ services:
 
 before_install:
   - sudo apt-get update -q
-  - sudo apt-get install -y aapt adb python3-wget
+  - sudo apt-get install -y aapt adb
+  - pip install python3-wget
 
-script: pytest test
+script: pytest -s test
