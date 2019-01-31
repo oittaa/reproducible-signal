@@ -1,0 +1,12 @@
+dist: xenial
+language: python
+python: 3.7
+
+services:
+  - docker
+
+before_install:
+  - sudo apt-get update -q
+  - sudo apt-get install -y aapt adb python3-wget
+
+script: pytest test
