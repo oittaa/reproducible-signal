@@ -8,17 +8,47 @@ IMAGE_BUILD_CONTEXT="${BASE_DIR}/image-build-context"
 TOOLS="aapt adb docker wget"
 
 display_help() {
-    printf >&2 "Usage: %s [signal.apk]\n\n" "$0"
-    printf >&2 "\tThe script builds Signal for Android and compares it to an APK found\n"
-    printf >&2 "\tfrom the connected phone. The phone must be in USB debugging mode!\n"
-    printf >&2 "\thttps://developer.android.com/studio/debug/dev-options#enable\n\n"
-    printf >&2 "\tAlternatively as the first parameter you can submit an APK that\n"
-    printf >&2 "\twas previously extracted.\n\n"
-    printf >&2 "\tIf the script finishes successfully, the last line should read:\n"
-    printf >&2 "\t\"APKs match!\"\n"
-    printf >&2 "\tDon't worry about the \"BUILD FAILED\" message you'll see above.\n"
-    printf >&2 "\tYou don't have the signing key, but the unsigned APK was built anyway.\n"
-    exit 1
+	printf >&2 "Usage: %s [signal.apk]\n\n" "$0"
+	printf >&2 "\tThe script builds Signal for Android and compares it to an APK found\n"
+	printf >&2 "\tfrom the connected phone. The phone must be in USB debugging mode!\n"
+	printf >&2 "\thttps://developer.android.com/studio/debug/dev-options#enable\n\n"
+	printf >&2 "\tAlternatively as the first parameter you can submit an APK that\n"
+	printf >&2 "\twas previously extracted.\n\n"
+	printf >&2 "\tIf the script finishes successfully, the last line should read:\n"
+	printf >&2 "\t\"APKs match!\"\n"
+	printf >&2 "\tDon't worry about the \"BUILD FAILED\" message you'll see above.\n"
+	printf >&2 "\tYou don't have the signing key, but the unsigned APK was built anyway.\n"
+	exit 1
+}
+
+check_connected_devices() {
+	# Check if the phone is connected
+	printf "##### Trying to find a connected phone.\n"
+	count=0
+	while ! adb devices -l | grep -P '^[A-Z0-9]{5,}'
+	do
+		count=$((count+1))
+		if [ "$count" -ge 100 ]
+		then
+			printf >&2 "Timed out. Aborting.\n"
+			exit 1
+		fi
+		printf "%s Coudn't find any connected Android devices. Waiting...\n" "$(date "+%F %T")"
+		sleep 3
+	done
+}
+
+display_disconnect_device() {
+
+	if [ "$DISPLAY" ] || [ "$WAYLAND_DISPLAY" ] || [ "$MIR_SOCKET" ] && command -v zenity >/dev/null 2>&1
+	then
+		zenity --info --timeout 60 --title="Signal APK extracted" --height 150 --width 400 \
+			--text="<big>You can disconnect your phone now.</big>\n\nThis window closes automatically after 60 seconds. The extracted APK can be found at:\n${APK_DIR_FROM_PLAY_STORE}/${APK_FILE_FROM_PLAY_STORE}" &
+	else
+		printf "#####################################################################\n"
+		printf "#####\t\tYOU CAN DISCONNECT YOUR PHONE NOW\t\t#####\n"
+		printf "#####################################################################\n"
+	fi
 }
 
 if [ "$1" = "-h" ] || [ "$1" = "--help" ]
@@ -42,6 +72,7 @@ then
 	APK_DIR_FROM_PLAY_STORE=$(dirname "$(realpath "$1")")
 elif [ -z "$1" ]
 then
+	check_connected_devices
 	# Try to fetch the apk from the phone
 	printf "##### Fetching the APK from the phone.\n"
 	APK_PATH=$(adb shell pm path org.thoughtcrime.securesms | grep -oP '^package:\K.*/base.apk$')
@@ -49,12 +80,14 @@ then
 	adb pull \
     	"${APK_PATH}" \
     	"${APK_DIR_FROM_PLAY_STORE}/${APK_FILE_FROM_PLAY_STORE}"
+	display_disconnect_device
 else
 	display_help
 fi
 
 printf "##### Extracting version number from the APK.\n"
-VERSION=$(aapt dump badging "${APK_DIR_FROM_PLAY_STORE}/${APK_FILE_FROM_PLAY_STORE}" | grep -oP "^package:.*versionName='\K[0-9.]+")
+VERSION=$(aapt dump badging "${APK_DIR_FROM_PLAY_STORE}/${APK_FILE_FROM_PLAY_STORE}" \
+	| grep -oP "^package:.*versionName='\K[0-9.]+")
 
 printf "##### Building a Docker image for Signal.\n"
 printf "##### This will take some time!\n"
@@ -71,4 +104,8 @@ docker run \
 	--volume "${APK_DIR_FROM_PLAY_STORE}":/signal-build/apk-from-google-play-store \
 	--workdir /signal-build \
 	signal-android \
-	/bin/bash -c "wget https://raw.githubusercontent.com/oittaa/reproducible-signal/master/apkdiff3.py && chmod +x apkdiff3.py && git clone https://github.com/signalapp/Signal-Android.git && cd Signal-Android && git checkout --quiet v${VERSION} && ./gradlew clean assembleRelease; ../apkdiff3.py build/outputs/apk/play/release/Signal-play-release-unsigned-${VERSION}.apk '../apk-from-google-play-store/${APK_FILE_FROM_PLAY_STORE}'"
+	/bin/bash -c "wget https://raw.githubusercontent.com/oittaa/reproducible-signal/master/apkdiff3.py \
+		&& chmod +x apkdiff3.py && git clone https://github.com/signalapp/Signal-Android.git \
+		&& cd Signal-Android && git checkout --quiet v${VERSION} && ./gradlew clean assembleRelease \
+		; ../apkdiff3.py build/outputs/apk/play/release/Signal-play-release-unsigned-${VERSION}.apk \
+			'../apk-from-google-play-store/${APK_FILE_FROM_PLAY_STORE}'"
