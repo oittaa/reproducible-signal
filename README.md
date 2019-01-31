@@ -19,9 +19,13 @@ Since version 3.15.0 Signal for Android has supported reproducible builds. This 
     2. Reboot your computer before continuing.
 3. Get the files `git clone https://github.com/oittaa/reproducible-signal.git && cd reproducible-signal`
 4. Connect your phone to the computer. USB debugging must be enabled!
-5. run `./reproducible-signal.sh`
+5. Run `./reproducible-signal.sh`
+    * The script might take several minutes to complete. If everything went right and the APKs match, the last line of output will be `APKs match!`
 
-Alternatively you can compare a previously extracted APK without connecting your phone. Run the following command: `./reproducible-signal.sh /path/to/signal.apk`
+Alternatively you can compare a previously extracted APK without connecting your phone.
+```
+./reproducible-signal.sh /path/to/signal.apk
+```
 
 ## Windows / macOS / other
 
