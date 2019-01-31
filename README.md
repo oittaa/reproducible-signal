@@ -13,7 +13,7 @@ Since version 3.15.0 Signal for Android has supported reproducible builds. This 
 ## Ubuntu 18.04
 
 0. You will need around 10GB of free space for Docker images and Signal build process
-1. Install the following packages `sudo apt install aapt adb docker.io wget`
+1. Install the required packages `sudo apt install aapt adb docker.io git wget`
 2. If you had to install Docker
     1. Add youserlf to the group `sudo usermod -aG docker $USER`
     2. Reboot your computer before continuing.
