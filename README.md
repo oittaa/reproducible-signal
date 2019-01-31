@@ -13,11 +13,11 @@ Since version 3.15.0 Signal for Android has supported reproducible builds. This 
 ## Ubuntu 18.04
 
 0. You will need around 10GB of free space for Docker images and Signal build process
-1. Get the files `git clone https://github.com/oittaa/reproducible-signal.git && cd reproducible-signal`
-2. Install the following packages `sudo apt install aapt adb docker.io wget`
-3. If you had to install Docker
+1. Install the following packages `sudo apt install aapt adb docker.io wget`
+2. If you had to install Docker
     1. Add youserlf to the group `sudo usermod -aG docker $USER`
     2. Reboot your computer before continuing.
+3. Get the files `git clone https://github.com/oittaa/reproducible-signal.git && cd reproducible-signal`
 4. Connect your phone to the computer. USB debugging must be enabled!
 5. run `./reproducible-signal.sh`
 
