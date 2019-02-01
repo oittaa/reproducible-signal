@@ -13,11 +13,9 @@ display_help() {
 	printf >&2 "\tfrom the connected phone. The phone must be in USB debugging mode!\n"
 	printf >&2 "\thttps://developer.android.com/studio/debug/dev-options#enable\n\n"
 	printf >&2 "\tAlternatively as the first parameter you can submit an APK that\n"
-	printf >&2 "\twas previously extracted.\n\n"
+	printf >&2 "\twas previously extracted, in which case you don't need a phone.\n\n"
 	printf >&2 "\tIf the script finishes successfully and the APKs match, the last \n"
-	printf >&2 "\tline should read \"APKs match!\" and exit status is set to \"0\".\n"
-	printf >&2 "\tDon't worry about the \"BUILD FAILED\" message you'll see above it.\n"
-	printf >&2 "\tYou don't have the signing key, but the unsigned APK was built anyway.\n"
+	printf >&2 "\tline of output will be \"APKs match!\" and the exit status is set to \"0\".\n"
 	exit 1
 }
 
@@ -85,7 +83,7 @@ then
 			printf >&2 "Timed out. Aborting.\n"
 			exit 1
 		fi
-		printf "Waiting for authorization...\n"
+		printf "%s Waiting for authorization...\n" "$(date "+%F %T")"
 		sleep 3
 	done
 	APK_FILE_FROM_PLAY_STORE="Signal-$(date '+%F_%T').apk"
@@ -121,6 +119,7 @@ docker run \
 	/bin/bash -c "wget https://raw.githubusercontent.com/oittaa/reproducible-signal/master/apkdiff3.py \
 		&& chmod +x apkdiff3.py && git clone https://github.com/signalapp/Signal-Android.git \
 		&& cd Signal-Android && git checkout --quiet v${VERSION} && ./gradlew clean assembleRelease \
+			-x signProductionPlayRelease -x signProductionWebsiteRelease \
 		; ../apkdiff3.py build/outputs/apk/play/release/Signal-play-release-unsigned-${VERSION}.apk \
 			'../apk-from-google-play-store/${APK_FILE_FROM_PLAY_STORE}'" | tee "$LOGFILE"
 

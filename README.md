@@ -20,7 +20,7 @@ Since version 3.15.0 Signal for Android has supported reproducible builds. This 
 3. Get the files `git clone https://github.com/oittaa/reproducible-signal.git && cd reproducible-signal`
 4. Connect your phone to the computer. USB debugging must be enabled!
 5. Run `./reproducible-signal.sh`
-    * The script might take several minutes to complete. If everything went right and the APKs match, the last line of output will be `APKs match!`. Don't worry about the `BUILD FAILED` message you'll see above it. You don't have the signing key, but the unsigned APK was built anyway.
+    * The script might take several minutes to complete. If everything went right and the APKs match, the last line of output will be `APKs match!`.
 
 Alternatively you can compare a previously extracted APK without connecting your phone.
 ```
