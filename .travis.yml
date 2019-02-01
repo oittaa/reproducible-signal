@@ -8,9 +8,9 @@ env:
     - CACHE="$HOME/cache"
 
 cache:
-  pip
   directories:
     - $HOME/cache
+    - $HOME/.cache/pip
 
 services:
   - docker
