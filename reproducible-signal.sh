@@ -1,11 +1,28 @@
 #!/bin/sh
+#
+# reproducible-signal - compiles Signal and compares it to an APK
+#
+# Copyright (C) 2019  Eero Vuojolahti
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 set -e
 
 BASE_DIR="${HOME}/reproducible-signal"
 APK_DIR_FROM_PLAY_STORE="${BASE_DIR}/apk-from-google-play-store"
 IMAGE_BUILD_CONTEXT="${BASE_DIR}/image-build-context"
-TOOLS="aapt adb docker wget"
+NEEDED_TOOLS="aapt adb docker wget"
 
 display_help() {
 	printf >&2 "Usage: %s [signal.apk]\n\n" "$0"
@@ -21,7 +38,7 @@ display_help() {
 
 display_disconnect_device() {
 
-	if [ "$DISPLAY" ] || [ "$WAYLAND_DISPLAY" ] || [ "$MIR_SOCKET" ] && command -v zenity >/dev/null 2>&1
+	if [ "${DISPLAY}" ] || [ "${WAYLAND_DISPLAY}" ] || [ "${MIR_SOCKET}" ] && command -v zenity >/dev/null 2>&1
 	then
 		zenity --info --timeout 60 --title="Signal APK extracted" --height 150 --width 400 \
 			--text="<big>You can disconnect your phone now.</big>\n\nThis window closes automatically after 60 seconds.\n\nThe extracted APK can be found at ${APK_DIR_FROM_PLAY_STORE}/${APK_FILE_FROM_PLAY_STORE}" &
@@ -34,8 +51,8 @@ display_disconnect_device() {
 
 cleanup() {
   rv=$?
-  rm -f "$LOGFILE"
-  exit $rv
+  rm -f -- "${LOGFILE}"
+  exit ${rv}
 }
 
 if [ "$1" = "-h" ] || [ "$1" = "--help" ]
@@ -43,29 +60,79 @@ then
 	display_help
 fi
 
-for tool in $TOOLS
+# Check if we need to install packages
+DOCKER_NEEDED=""
+PACKAGES=""
+for TOOL in ${NEEDED_TOOLS}
 do
-	command -v ${tool} >/dev/null 2>&1 || { printf >&2 \
-		"The script requires %s, but it's not installed. Aborting.\n" "${tool}"; exit 1; }
+	if command -v ${TOOL} >/dev/null 2>&1
+	then
+		continue
+	fi
+
+	# On the first iteration ask if the user wants to install the packages
+	if  [ ! "${PACKAGES}" ]
+	then
+		printf "The script requires %s, but it's not installed.\n" "${TOOL}"
+		read -p "Would you like to install the missing dependencies? [Y/n] " RESPONSE
+		case "${RESPONSE}" in
+			[yY]|"")
+				;;
+			*)
+				printf >&2 "Aborting.\n"
+				exit 1
+				;;
+		esac
+	fi
+	case "${TOOL}" in
+		"docker")
+			DOCKER_NEEDED="YES"
+			[ "${PACKAGES}" ] && PACKAGES="${PACKAGES} ${TOOL}.io" || PACKAGES="${TOOL}.io"
+			;;
+		"aapt"|"adb"|"wget")
+			[ "${PACKAGES}" ] && PACKAGES="${PACKAGES} ${TOOL}" || PACKAGES="${TOOL}"
+			;;
+		*)
+			printf >&2 "Unknown dependency %s. Aborting.\n" "${TOOL}"
+			exit 1
+			;;
+	esac
 done
 
+# Install missing packages
+if [ "${PACKAGES}" ]
+then
+	SUDO=""
+	[ "$(id -u)" -eq 0 ] || SUDO="sudo"
+	printf "##### Installing the following packages: %s\n" "${PACKAGES}"
+	${SUDO} apt -q update
+	${SUDO} apt -yq install ${PACKAGES}
+	if [ "${DOCKER_NEEDED}" ] && [ "${SUDO}" ]
+	then
+		sudo usermod -aG docker "${USER}"
+		printf "##### Reboot required.\n"
+		exit 1
+	fi
+fi
+
+# Prepare directories
 mkdir -p "${APK_DIR_FROM_PLAY_STORE}"
 mkdir -p "${IMAGE_BUILD_CONTEXT}"
 
 if [ -f "$1" ]
 then
-	# User submitted the apk in a file
+	# User submitted the APK in a file
 	APK_FILE_FROM_PLAY_STORE=$(basename "$1")
 	APK_DIR_FROM_PLAY_STORE=$(dirname "$(realpath "$1")")
 elif [ -z "$1" ]
 then
-	count=0
+	COUNTER=0
 	# Check if the phone is connected
 	printf "##### Trying to find a connected phone.\n"
 	while ! adb devices -l | grep -P '^[A-Z0-9]{5,}'
 	do
-		count=$((count+1))
-		if [ "$count" -ge 100 ]
+		COUNTER=$((COUNTER+1))
+		if [ "${COUNTER}" -ge 100 ]
 		then
 			printf >&2 "Timed out. Aborting.\n"
 			exit 1
@@ -73,12 +140,12 @@ then
 		printf "%s Coudn't find any connected Android devices. Waiting...\n" "$(date "+%F %T")"
 		sleep 3
 	done
-	# Try to fetch the apk from the phone
+	# Try to fetch the APK from the phone
 	printf "##### Fetching the APK from the phone.\n"
 	while ! APK_PATH=$(adb shell pm path org.thoughtcrime.securesms | grep -oP '^package:\K.*/base.apk$')
 	do
-		count=$((count+1))
-		if [ "$count" -ge 100 ]
+		COUNTER=$((COUNTER+1))
+		if [ "${COUNTER}" -ge 100 ]
 		then
 			printf >&2 "Timed out. Aborting.\n"
 			exit 1
@@ -88,8 +155,8 @@ then
 	done
 	APK_FILE_FROM_PLAY_STORE="Signal-$(date '+%F_%T').apk"
 	adb pull \
-    	"${APK_PATH}" \
-    	"${APK_DIR_FROM_PLAY_STORE}/${APK_FILE_FROM_PLAY_STORE}"
+		"${APK_PATH}" \
+		"${APK_DIR_FROM_PLAY_STORE}/${APK_FILE_FROM_PLAY_STORE}"
 	display_disconnect_device
 else
 	display_help
@@ -121,7 +188,7 @@ docker run \
 		&& cd Signal-Android && git checkout --quiet v${VERSION} && ./gradlew clean assembleRelease \
 			-x signProductionPlayRelease -x signProductionWebsiteRelease \
 		; ../apkdiff3.py build/outputs/apk/play/release/Signal-play-release-unsigned-${VERSION}.apk \
-			'../apk-from-google-play-store/${APK_FILE_FROM_PLAY_STORE}'" | tee "$LOGFILE"
+			'../apk-from-google-play-store/${APK_FILE_FROM_PLAY_STORE}'" | tee "${LOGFILE}"
 
 # Set exit status
-tail -n 1 "$LOGFILE" | grep -q "^APKs match"
+tail -n 1 "${LOGFILE}" | grep -q "^APKs match"

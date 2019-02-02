@@ -4,26 +4,32 @@
 
 Since version 3.15.0 Signal for Android has supported reproducible builds. This is achieved by replicating the build environment as a Docker image. You'll need to build the image, run a container instance of it, compile Signal inside the container and finally compare the resulted APK to the APK that is distributed in the Google Play Store.
 
-## TL;DR
+This script automates that.
 
-1. [Enable developer options and USB debugging](https://developer.android.com/studio/debug/dev-options#enable) on your phone
-2. Connect your phone to the computer via USB
-3. run `./reproducible-signal.sh`
+## Ubuntu 18.04 TL;DR
 
-## Ubuntu 18.04
+1. [Enable developer options and USB debugging](https://developer.android.com/studio/debug/dev-options#enable) on your phone.
+2. Connect your phone to the computer via USB.
+3. Run the commands below and follow the instructions.
+```
+mkdir -p "$HOME/reproducible-signal"
+cd "$HOME/reproducible-signal"
+wget https://raw.githubusercontent.com/oittaa/reproducible-signal/master/reproducible-signal.sh
+chmod +x ./reproducible-signal.sh
+./reproducible-signal.sh
+```
 
-0. You will need around 10GB of free space for Docker images and Signal build process
-1. Install the required packages `sudo apt install aapt adb docker.io wget`
-2. If you had to install Docker
+The script might take several minutes to complete. If everything went right and the APKs match, the last line of output will be `APKs match!`
+
+### Ubuntu 18.04 details
+
+1. You will need around 10GB of free space for Docker images and Signal build process
+2. Required packages can be installed manually `sudo apt install aapt adb docker.io wget`
+3. If you had to install Docker
     1. Add yourself to the group `sudo usermod -aG docker $USER`
     2. Reboot your computer before continuing.
-3. Create directory `mkdir -p "$HOME/reproducible-signal" && cd "$HOME/reproducible-signal"`
-4. Get the file `wget https://raw.githubusercontent.com/oittaa/reproducible-signal/master/reproducible-signal.sh`
-5. Connect your phone to the computer. USB debugging must be enabled!
-6. Run `chmod +x ./reproducible-signal.sh && ./reproducible-signal.sh`
-    * The script might take several minutes to complete. If everything went right and the APKs match, the last line of output will be `APKs match!`.
 
-Alternatively you can compare a previously extracted APK without connecting your phone.
+You can compare a previously extracted APK without connecting your phone.
 ```
 ./reproducible-signal.sh /path/to/signal.apk
 ```
