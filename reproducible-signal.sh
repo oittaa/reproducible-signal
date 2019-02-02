@@ -183,12 +183,16 @@ docker run \
 	--volume "${APK_DIR_FROM_PLAY_STORE}":/signal-build/apk-from-google-play-store \
 	--workdir /signal-build \
 	signal-android \
-	/bin/bash -c "wget https://raw.githubusercontent.com/oittaa/reproducible-signal/master/apkdiff3.py \
-		&& chmod +x apkdiff3.py && git clone https://github.com/signalapp/Signal-Android.git \
-		&& cd Signal-Android && git checkout --quiet v${VERSION} && ./gradlew clean assembleRelease \
-			-x signProductionPlayRelease -x signProductionWebsiteRelease \
-		; ../apkdiff3.py build/outputs/apk/play/release/Signal-play-release-unsigned-${VERSION}.apk \
-			'../apk-from-google-play-store/${APK_FILE_FROM_PLAY_STORE}'" | tee "${LOGFILE}"
+	/bin/bash -c \
+		"wget https://raw.githubusercontent.com/oittaa/reproducible-signal/master/apkdiff3.py \
+		&& chmod +x apkdiff3.py \
+		&& git clone https://github.com/signalapp/Signal-Android.git \
+		&& cd Signal-Android \
+		&& git checkout --quiet v${VERSION} \
+		&& ./gradlew clean assembleRelease -x signProductionPlayRelease -x signProductionWebsiteRelease \
+		&& ../apkdiff3.py build/outputs/apk/play/release/Signal-play-release-unsigned-${VERSION}.apk \
+			'../apk-from-google-play-store/${APK_FILE_FROM_PLAY_STORE}'" \
+			| tee "${LOGFILE}"
 
 # Set exit status
 tail -n 1 "${LOGFILE}" | grep -q "^APKs match"
