@@ -150,7 +150,7 @@ then
 			printf >&2 "Timed out. Aborting.\n"
 			exit 1
 		fi
-		printf "%s Waiting for authorization...\n" "$(date "+%F %T")"
+		printf "%s Couldn't find the Signal APK or waiting for authorization. Retrying...\n" "$(date "+%F %T")"
 		sleep 3
 	done
 	APK_FILE_FROM_PLAY_STORE="Signal-$(date '+%F_%T').apk"
