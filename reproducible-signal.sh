@@ -50,9 +50,9 @@ display_disconnect_device() {
 }
 
 cleanup() {
-  rv=$?
+  RV=$?
   rm -f -- "${LOGFILE}"
-  exit ${rv}
+  exit ${RV}
 }
 
 if [ "$1" = "-h" ] || [ "$1" = "--help" ]
@@ -89,12 +89,8 @@ do
 			DOCKER_NEEDED="YES"
 			[ "${PACKAGES}" ] && PACKAGES="${PACKAGES} ${TOOL}.io" || PACKAGES="${TOOL}.io"
 			;;
-		"aapt"|"adb"|"wget")
-			[ "${PACKAGES}" ] && PACKAGES="${PACKAGES} ${TOOL}" || PACKAGES="${TOOL}"
-			;;
 		*)
-			printf >&2 "Unknown dependency %s. Aborting.\n" "${TOOL}"
-			exit 1
+			[ "${PACKAGES}" ] && PACKAGES="${PACKAGES} ${TOOL}" || PACKAGES="${TOOL}"
 			;;
 	esac
 done
@@ -115,9 +111,11 @@ then
 	fi
 fi
 
-# Prepare directories
+# Prepare directories and temporary files
 mkdir -p "${APK_DIR_FROM_PLAY_STORE}"
 mkdir -p "${IMAGE_BUILD_CONTEXT}"
+LOGFILE=$(mktemp --tmpdir reproducible-signal.XXXXXXXXXX.log)
+trap cleanup EXIT HUP INT QUIT ABRT TERM
 
 if [ -f "$1" ]
 then
@@ -142,7 +140,7 @@ then
 	done
 	# Try to fetch the APK from the phone
 	printf "##### Fetching the APK from the phone.\n"
-	while ! APK_PATH=$(adb shell pm path org.thoughtcrime.securesms | grep -oP '^package:\K.*/base.apk$')
+	while ! APK_PATH=$(adb shell pm path org.thoughtcrime.securesms 2> "${LOGFILE}" | grep -oP '^package:\K.*/base.apk$')
 	do
 		COUNTER=$((COUNTER+1))
 		if [ "${COUNTER}" -ge 100 ]
@@ -150,7 +148,13 @@ then
 			printf >&2 "Timed out. Aborting.\n"
 			exit 1
 		fi
-		printf "%s Couldn't find the Signal APK or waiting for authorization. Retrying...\n" "$(date "+%F %T")"
+		if grep -q "^error: device unauthorized." "${LOGFILE}"
+		then
+			printf "%s Waiting for authorization...\n" "$(date "+%F %T")"
+		else
+			printf >&2 "Couldn't find the Signal APK. Aborting.\n"
+			exit 1
+		fi
 		sleep 3
 	done
 	APK_FILE_FROM_PLAY_STORE="Signal-$(date '+%F_%T').apk"
@@ -175,8 +179,6 @@ docker build --file Dockerfile_v${VERSION} --tag signal-android .
 
 printf "##### Compiling Signal inside a container.\n"
 printf "##### This will take some time!\n"
-LOGFILE=$(mktemp --tmpdir reproducible-signal.XXXXXXXXXX.log)
-trap cleanup EXIT HUP INT QUIT ABRT TERM
 docker run \
 	--name signal \
 	--rm \
