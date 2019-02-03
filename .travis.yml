@@ -8,10 +8,8 @@ env:
     - CACHE="$HOME/cache"
 
 cache:
-  pip: true
   directories:
     - $HOME/cache
-    - $HOME/.cache/pip
 
 services:
   - docker
@@ -23,6 +21,5 @@ before_install:
 install:
   - sudo apt-get update -q
   - sudo apt-get install -y aapt adb
-  - pip install pytest-parallel
 
-script: pytest -x --tests-per-worker 2 test
+script: pytest -x test
