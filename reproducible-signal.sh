@@ -55,10 +55,16 @@ cleanup() {
   exit ${RV}
 }
 
-if [ "$1" = "-h" ] || [ "$1" = "--help" ]
-then
-	display_help
-fi
+DOCKER_ONLY=""
+case "$1" in
+	"-h"|"--help")
+		display_help
+		;;
+	"--docker-image-only")
+		DOCKER_ONLY="TRUE"
+		shift
+		;;
+esac
 
 # Check if we need to install packages
 DOCKER_NEEDED=""
@@ -120,8 +126,8 @@ trap cleanup EXIT HUP INT QUIT ABRT TERM
 if [ -f "$1" ]
 then
 	# User submitted the APK in a file
-	APK_FILE_FROM_PLAY_STORE=$(basename "$1")
-	APK_DIR_FROM_PLAY_STORE=$(dirname "$(realpath "$1")")
+	APK_FILE_FROM_PLAY_STORE=$(basename -- "$1")
+	APK_DIR_FROM_PLAY_STORE=$(dirname "$(realpath -- "$1")")
 elif [ -z "$1" ]
 then
 	COUNTER=0
@@ -176,6 +182,7 @@ wget -O "${IMAGE_BUILD_CONTEXT}/Dockerfile_v${VERSION}" \
 	https://raw.githubusercontent.com/signalapp/Signal-Android/v${VERSION}/Dockerfile
 cd "${IMAGE_BUILD_CONTEXT}"
 docker build --file Dockerfile_v${VERSION} --tag signal-android .
+[ "${DOCKER_ONLY}" ] && exit 0
 
 printf "##### Compiling Signal inside a container.\n"
 printf "##### This will take some time!\n"

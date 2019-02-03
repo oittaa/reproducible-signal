@@ -8,6 +8,7 @@ env:
     - CACHE="$HOME/cache"
 
 cache:
+  pip: true
   directories:
     - $HOME/cache
     - $HOME/.cache/pip
@@ -24,4 +25,4 @@ install:
   - sudo apt-get install -y aapt adb
   - pip install pytest-parallel
 
-script: pytest --tests-per-worker 2 test
+script: pytest -x --tests-per-worker 2 test
