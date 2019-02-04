@@ -57,29 +57,29 @@ mkdir -p -- "${APK_DIR_FROM_PLAY_STORE}" "${IMAGE_BUILD_CONTEXT}"
 APK_PATH=$(adb shell pm path org.thoughtcrime.securesms | grep -oP '^package:\K.*/base.apk$')
 APK_FILE_FROM_PLAY_STORE="Signal-$(date '+%F_%T').apk"
 adb pull \
-	"${APK_PATH}" \
-	"${APK_DIR_FROM_PLAY_STORE}/${APK_FILE_FROM_PLAY_STORE}"
+  "${APK_PATH}" \
+  "${APK_DIR_FROM_PLAY_STORE}/${APK_FILE_FROM_PLAY_STORE}"
 VERSION=$(aapt dump badging "${APK_DIR_FROM_PLAY_STORE}/${APK_FILE_FROM_PLAY_STORE}" \
-	| grep -oP "^package:.*versionName='\K[0-9.]+")
+  | grep -oP "^package:.*versionName='\K[0-9.]+")
 wget -O "${IMAGE_BUILD_CONTEXT}/Dockerfile_v${VERSION}" \
-	https://raw.githubusercontent.com/signalapp/Signal-Android/v${VERSION}/Dockerfile
+  https://raw.githubusercontent.com/signalapp/Signal-Android/v${VERSION}/Dockerfile
 cd "${IMAGE_BUILD_CONTEXT}"
 docker build --file Dockerfile_v${VERSION} --tag signal-android .
 docker run \
-	--name signal \
-	--rm \
-	--volume "${APK_DIR_FROM_PLAY_STORE}":/signal-build/apk-from-google-play-store \
-	--workdir /signal-build \
-	signal-android \
-	/bin/bash -c \
-		"wget https://raw.githubusercontent.com/oittaa/reproducible-signal/master/apkdiff3.py \
-		&& chmod +x apkdiff3.py \
-		&& git clone https://github.com/signalapp/Signal-Android.git \
-		&& cd Signal-Android \
-		&& git checkout --quiet v${VERSION} \
-		&& ./gradlew clean assemblePlayRelease -x signProductionPlayRelease \
-		&& ../apkdiff3.py build/outputs/apk/play/release/Signal-play-release-unsigned-${VERSION}.apk \
-			'../apk-from-google-play-store/${APK_FILE_FROM_PLAY_STORE}'"
+  --name signal \
+  --rm \
+  --volume "${APK_DIR_FROM_PLAY_STORE}":/signal-build/apk-from-google-play-store \
+  --workdir /signal-build \
+  signal-android \
+  /bin/bash -c \
+    "wget https://raw.githubusercontent.com/oittaa/reproducible-signal/master/apkdiff3.py \
+    && chmod +x apkdiff3.py \
+    && git clone https://github.com/signalapp/Signal-Android.git \
+    && cd Signal-Android \
+    && git checkout --quiet v${VERSION} \
+    && ./gradlew clean assemblePlayRelease -x signProductionPlayRelease \
+    && ../apkdiff3.py build/outputs/apk/play/release/Signal-play-release-unsigned-${VERSION}.apk \
+      '../apk-from-google-play-store/${APK_FILE_FROM_PLAY_STORE}'"
 ```
 
 ## Windows / macOS / other
