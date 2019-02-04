@@ -34,9 +34,9 @@ You can compare a previously extracted APK without connecting your phone.
 ./reproducible-signal.sh /path/to/signal.apk
 ```
 
-### What if I don't have an USB cable?
+### What if I don't have a USB cable?
 
-Many different apps can extact installed APKs. Here's an example how to get the APK to your computer with [Files by Google](https://play.google.com/store/apps/details?id=com.google.android.apps.nbu.files) and [Google Drive](https://play.google.com/store/apps/details?id=com.google.android.apps.docs).
+Many different apps can extract installed APKs. Here's an example how to get the APK to your computer with [Files by Google](https://play.google.com/store/apps/details?id=com.google.android.apps.nbu.files) and [Google Drive](https://play.google.com/store/apps/details?id=com.google.android.apps.docs).
 
 1. Open **Files by Google**
 2. Tap `Browse`
