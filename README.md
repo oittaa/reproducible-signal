@@ -6,7 +6,7 @@ Since version 3.15.0 Signal for Android has supported reproducible builds. This 
 
 This script automates that.
 
-## Ubuntu 18.04 TL;DR
+## Ubuntu 18.04 - TL;DR
 
 1. [Enable developer options and USB debugging](https://developer.android.com/studio/debug/dev-options#enable) on your phone.
 2. Connect your phone to the computer via USB.
@@ -32,6 +32,41 @@ The script might take several minutes to complete. If everything went right and 
 You can compare a previously extracted APK without connecting your phone.
 ```
 ./reproducible-signal.sh /path/to/signal.apk
+```
+
+## Linux - "I want to do it manually and I know what I'm doing"
+
+```bash
+BASE_DIR="${HOME}/reproducible-signal"
+APK_DIR_FROM_PLAY_STORE="${BASE_DIR}/apk-from-google-play-store"
+IMAGE_BUILD_CONTEXT="${BASE_DIR}/image-build-context"
+mkdir -p -- "${APK_DIR_FROM_PLAY_STORE}" "${IMAGE_BUILD_CONTEXT}"
+APK_PATH=$(adb shell pm path org.thoughtcrime.securesms | grep -oP '^package:\K.*/base.apk$')
+APK_FILE_FROM_PLAY_STORE="Signal-$(date '+%F_%T').apk"
+adb pull \
+	"${APK_PATH}" \
+	"${APK_DIR_FROM_PLAY_STORE}/${APK_FILE_FROM_PLAY_STORE}"
+VERSION=$(aapt dump badging "${APK_DIR_FROM_PLAY_STORE}/${APK_FILE_FROM_PLAY_STORE}" \
+	| grep -oP "^package:.*versionName='\K[0-9.]+")
+wget -O "${IMAGE_BUILD_CONTEXT}/Dockerfile_v${VERSION}" \
+	https://raw.githubusercontent.com/signalapp/Signal-Android/v${VERSION}/Dockerfile
+cd "${IMAGE_BUILD_CONTEXT}"
+docker build --file Dockerfile_v${VERSION} --tag signal-android .
+docker run \
+	--name signal \
+	--rm \
+	--volume "${APK_DIR_FROM_PLAY_STORE}":/signal-build/apk-from-google-play-store \
+	--workdir /signal-build \
+	signal-android \
+	/bin/bash -c \
+		"wget https://raw.githubusercontent.com/oittaa/reproducible-signal/master/apkdiff3.py \
+		&& chmod +x apkdiff3.py \
+		&& git clone https://github.com/signalapp/Signal-Android.git \
+		&& cd Signal-Android \
+		&& git checkout --quiet v${VERSION} \
+		&& ./gradlew clean assembleRelease -x signProductionPlayRelease -x signProductionWebsiteRelease \
+		&& ../apkdiff3.py build/outputs/apk/play/release/Signal-play-release-unsigned-${VERSION}.apk \
+			'../apk-from-google-play-store/${APK_FILE_FROM_PLAY_STORE}'"
 ```
 
 ## Windows / macOS / other

@@ -49,10 +49,19 @@ display_disconnect_device() {
 	fi
 }
 
+print_info() {
+	printf "$(date "+%F %T") %s\n" "$*"
+}
+
+error_exit() {
+	printf >&2 "$(date "+%F %T") %s\n" "$*"
+	exit 1
+}
+
 cleanup() {
-  RV=$?
-  rm -f -- "${LOGFILE}"
-  exit ${RV}
+	RV=$?
+	rm -f -- "${LOGFILE}"
+	exit ${RV}
 }
 
 DOCKER_ONLY=""
@@ -79,14 +88,13 @@ do
 	# On the first iteration ask if the user wants to install the packages
 	if  [ ! "${PACKAGES}" ]
 	then
-		printf "The script requires %s, but it's not installed.\n" "${TOOL}"
+		print_info "The script requires \"${TOOL}\", but it's not installed."
 		read -p "Would you like to install the missing dependencies? [Y/n] " RESPONSE
 		case "${RESPONSE}" in
 			[yY]|"")
 				;;
 			*)
-				printf >&2 "Aborting.\n"
-				exit 1
+				error_exit "Aborting."
 				;;
 		esac
 	fi
@@ -106,20 +114,19 @@ if [ "${PACKAGES}" ]
 then
 	SUDO=""
 	[ "$(id -u)" -eq 0 ] || SUDO="sudo"
-	printf "##### Installing the following packages: %s\n" "${PACKAGES}"
+	print_info "Installing the following packages: ${PACKAGES}"
 	${SUDO} apt -q update
 	${SUDO} apt -yq install ${PACKAGES}
 	if [ "${DOCKER_NEEDED}" ] && [ "${SUDO}" ]
 	then
 		sudo usermod -aG docker "${USER}"
-		printf "##### Reboot required.\n"
-		exit 1
+		error_exit "Reboot required."
 	fi
 fi
 
 # Prepare directories and temporary files
-mkdir -p "${APK_DIR_FROM_PLAY_STORE}"
-mkdir -p "${IMAGE_BUILD_CONTEXT}"
+mkdir -p -- "${APK_DIR_FROM_PLAY_STORE}"
+mkdir -p -- "${IMAGE_BUILD_CONTEXT}"
 LOGFILE=$(mktemp --tmpdir reproducible-signal.XXXXXXXXXX.log)
 trap cleanup EXIT HUP INT QUIT ABRT TERM
 
@@ -132,34 +139,31 @@ elif [ -z "$1" ]
 then
 	COUNTER=0
 	# Check if the phone is connected
-	printf "##### Trying to find a connected phone.\n"
+	print_info "Trying to find a connected phone."
 	while ! adb devices -l | grep -P '^[A-Z0-9]{5,}'
 	do
 		COUNTER=$((COUNTER+1))
 		if [ "${COUNTER}" -ge 100 ]
 		then
-			printf >&2 "Timed out. Aborting.\n"
-			exit 1
+			error_exit "Timed out. Aborting."
 		fi
-		printf "%s Coudn't find any connected Android devices. Waiting...\n" "$(date "+%F %T")"
+		print_info "Couldn't find any connected Android devices. Waiting..."
 		sleep 3
 	done
 	# Try to fetch the APK from the phone
-	printf "##### Fetching the APK from the phone.\n"
+	print_info "Fetching the APK from the phone."
 	while ! APK_PATH=$(adb shell pm path org.thoughtcrime.securesms 2> "${LOGFILE}" | grep -oP '^package:\K.*/base.apk$')
 	do
 		COUNTER=$((COUNTER+1))
 		if [ "${COUNTER}" -ge 100 ]
 		then
-			printf >&2 "Timed out. Aborting.\n"
-			exit 1
+			error_exit "Timed out. Aborting."
 		fi
 		if grep -q "^error: device unauthorized." "${LOGFILE}"
 		then
-			printf "%s Waiting for authorization...\n" "$(date "+%F %T")"
+			print_info "Waiting for authorization..."
 		else
-			printf >&2 "Couldn't find the Signal APK. Aborting.\n"
-			exit 1
+			error_exit "Couldn't find the Signal APK. Aborting."
 		fi
 		sleep 3
 	done
@@ -172,20 +176,20 @@ else
 	display_help
 fi
 
-printf "##### Extracting version number from the APK.\n"
+print_info "Extracting version number from the APK."
 VERSION=$(aapt dump badging "${APK_DIR_FROM_PLAY_STORE}/${APK_FILE_FROM_PLAY_STORE}" \
 	| grep -oP "^package:.*versionName='\K[0-9.]+")
 
-printf "##### Building a Docker image for Signal.\n"
-printf "##### This will take some time!\n"
+print_info "Building a Docker image for Signal."
+print_info "This will take some time!"
 wget -O "${IMAGE_BUILD_CONTEXT}/Dockerfile_v${VERSION}" \
 	https://raw.githubusercontent.com/signalapp/Signal-Android/v${VERSION}/Dockerfile
 cd "${IMAGE_BUILD_CONTEXT}"
 docker build --file Dockerfile_v${VERSION} --tag signal-android .
 [ "${DOCKER_ONLY}" ] && exit 0
 
-printf "##### Compiling Signal inside a container.\n"
-printf "##### This will take some time!\n"
+print_info "Compiling Signal inside a container."
+print_info "This will take some time!"
 docker run \
 	--name signal \
 	--rm \
