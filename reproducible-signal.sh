@@ -202,7 +202,7 @@ docker run \
 		&& git clone https://github.com/signalapp/Signal-Android.git \
 		&& cd Signal-Android \
 		&& git checkout --quiet v${VERSION} \
-		&& ./gradlew clean assembleRelease -x signProductionPlayRelease -x signProductionWebsiteRelease \
+		&& ./gradlew clean assemblePlayRelease -x signProductionPlayRelease \
 		&& ../apkdiff3.py build/outputs/apk/play/release/Signal-play-release-unsigned-${VERSION}.apk \
 			'../apk-from-google-play-store/${APK_FILE_FROM_PLAY_STORE}'" \
 			| tee "${LOGFILE}"
