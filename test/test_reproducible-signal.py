@@ -41,7 +41,7 @@ def test_docker_build_image():
 
 def test_reproducible_signal():
     popen = Popen(
-        ["./reproducible-signal.sh", SIGNAL_APK],
+        ["./reproducible-signal.sh", "--website", SIGNAL_APK],
         stdout=PIPE, universal_newlines=True, bufsize=1
     )
     for line in popen.stdout:

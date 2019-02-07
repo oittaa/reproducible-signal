@@ -20,20 +20,24 @@
 set -e
 
 BASE_DIR="${HOME}/reproducible-signal"
-APK_DIR_FROM_PLAY_STORE="${BASE_DIR}/apk-from-google-play-store"
+APK_DIR="${BASE_DIR}/apk-from-google-play-store"
 IMAGE_BUILD_CONTEXT="${BASE_DIR}/image-build-context"
 NEEDED_TOOLS="aapt adb docker wget"
 
 display_help() {
-	printf >&2 "Usage: %s [signal.apk]\n\n" "$0"
-	printf >&2 "\tThe script builds Signal for Android and compares it to an APK found\n"
-	printf >&2 "\tfrom the connected phone. The phone must be in USB debugging mode!\n"
-	printf >&2 "\thttps://developer.android.com/studio/debug/dev-options#enable\n\n"
-	printf >&2 "\tAlternatively as the first parameter you can submit an APK that\n"
-	printf >&2 "\twas previously extracted, in which case you don't need a phone.\n\n"
-	printf >&2 "\tIf the script finishes successfully and the APKs match, the last \n"
-	printf >&2 "\tline of output will be \"APKs match!\" and the exit status is set to \"0\".\n"
-	exit 1
+	printf "Usage: %s [OPTION]... [FILE]\n\n" "$0"
+	printf "The script builds Signal for Android and compares it to an APK found\n"
+	printf "from the connected phone. The phone must be in USB debugging mode!\n"
+	printf "https://developer.android.com/studio/debug/dev-options#enable\n\n"
+	printf "Alternatively you can submit an APK file as a parameter that was\n"
+	printf "previously extracted, in which case you don't need a phone.\n\n"
+	printf "If the script finishes successfully and the APKs match, the last \n"
+	printf "line of output will be \"APKs match!\" and the exit status is set to \"0\".\n\n"
+	printf "  -d, --docker-image-only build docker image, but don't compile Signal\n"
+	printf "  -p, --play              compile APK with Play Store settings (default)\n"
+	printf "  -w, --website           compile APK with website settings\n"
+	printf "  -h, --help              display this help and exit\n"
+	exit "$1"
 }
 
 display_disconnect_device() {
@@ -41,7 +45,7 @@ display_disconnect_device() {
 	if [ "${DISPLAY}" ] || [ "${WAYLAND_DISPLAY}" ] || [ "${MIR_SOCKET}" ] && command -v zenity >/dev/null 2>&1
 	then
 		zenity --info --timeout 60 --title="Signal APK extracted" --height 150 --width 400 \
-			--text="<big>You can disconnect your phone now.</big>\n\nThis window closes automatically after 60 seconds.\n\nThe extracted APK can be found at ${APK_DIR_FROM_PLAY_STORE}/${APK_FILE_FROM_PLAY_STORE}" &
+			--text="<big>You can disconnect your phone now.</big>\n\nThis window closes automatically after 60 seconds.\n\nThe extracted APK can be found at ${APK_DIR}/${APK_FILE}" &
 	else
 		printf "#####################################################################\n"
 		printf "#####\t\tYOU CAN DISCONNECT YOUR PHONE NOW\t\t#####\n"
@@ -65,15 +69,18 @@ cleanup() {
 }
 
 DOCKER_ONLY=""
-case "$1" in
-	"-h"|"--help")
-		display_help
-		;;
-	"--docker-image-only")
-		DOCKER_ONLY="TRUE"
-		shift
-		;;
-esac
+RELEASE="PLAY"
+while true
+do
+	case "$1" in
+		"-h" | "--help" ) display_help 0 ;;
+		"-d" | "--docker-image-only" ) DOCKER_ONLY="TRUE"; shift ;;
+		"-w" | "--website" ) RELEASE="WEBSITE"; shift ;;
+		"-p" | "--play" ) RELEASE="PLAY"; shift ;;
+		-- ) shift; break ;;
+		* ) break ;;
+	esac
+done
 
 # Check if we need to install packages
 DOCKER_NEEDED=""
@@ -125,7 +132,7 @@ then
 fi
 
 # Prepare directories and temporary files
-mkdir -p -- "${APK_DIR_FROM_PLAY_STORE}"
+mkdir -p -- "${APK_DIR}"
 mkdir -p -- "${IMAGE_BUILD_CONTEXT}"
 LOGFILE=$(mktemp --tmpdir reproducible-signal.XXXXXXXXXX.log)
 trap cleanup EXIT HUP INT QUIT ABRT TERM
@@ -133,8 +140,8 @@ trap cleanup EXIT HUP INT QUIT ABRT TERM
 if [ -f "$1" ]
 then
 	# User submitted the APK in a file
-	APK_FILE_FROM_PLAY_STORE=$(basename -- "$1")
-	APK_DIR_FROM_PLAY_STORE=$(dirname "$(realpath -- "$1")")
+	APK_FILE=$(basename -- "$1")
+	APK_DIR=$(dirname "$(realpath -- "$1")")
 elif [ -z "$1" ]
 then
 	COUNTER=0
@@ -167,17 +174,17 @@ then
 		fi
 		sleep 3
 	done
-	APK_FILE_FROM_PLAY_STORE="Signal-$(date '+%F_%T').apk"
+	APK_FILE="Signal-$(date '+%F_%T').apk"
 	adb pull \
 		"${APK_PATH}" \
-		"${APK_DIR_FROM_PLAY_STORE}/${APK_FILE_FROM_PLAY_STORE}"
+		"${APK_DIR}/${APK_FILE}"
 	display_disconnect_device
 else
-	display_help
+	display_help 1
 fi
 
 print_info "Extracting version number from the APK."
-VERSION=$(aapt dump badging "${APK_DIR_FROM_PLAY_STORE}/${APK_FILE_FROM_PLAY_STORE}" \
+VERSION=$(aapt dump badging "${APK_DIR}/${APK_FILE}" \
 	| grep -oP "^package:.*versionName='\K[0-9.]+")
 
 print_info "Building a Docker image for Signal."
@@ -190,10 +197,18 @@ docker build --file Dockerfile_v${VERSION} --tag signal-android .
 
 print_info "Compiling Signal inside a container."
 print_info "This will take some time!"
+if [ "$RELEASE" = "PLAY" ]
+then
+	GRADLECMD="./gradlew clean assemblePlayRelease -x signProductionPlayRelease"
+	APK_OUTPUT="build/outputs/apk/play/release/Signal-play-release-unsigned-${VERSION}.apk"
+else
+	GRADLECMD="./gradlew clean assembleWebsiteRelease -x signProductionWebsiteRelease"
+	APK_OUTPUT="build/outputs/apk/website/release/Signal-website-release-unsigned-${VERSION}.apk"
+fi
 docker run \
 	--name signal \
 	--rm \
-	--volume "${APK_DIR_FROM_PLAY_STORE}":/signal-build/apk-from-google-play-store \
+	--volume "${APK_DIR}":/signal-build/apks \
 	--workdir /signal-build \
 	signal-android \
 	/bin/bash -c \
@@ -202,9 +217,8 @@ docker run \
 		&& git clone https://github.com/signalapp/Signal-Android.git \
 		&& cd Signal-Android \
 		&& git checkout --quiet v${VERSION} \
-		&& ./gradlew clean assemblePlayRelease -x signProductionPlayRelease \
-		&& ../apkdiff3.py build/outputs/apk/play/release/Signal-play-release-unsigned-${VERSION}.apk \
-			'../apk-from-google-play-store/${APK_FILE_FROM_PLAY_STORE}'" \
+		&& $GRADLECMD \
+		&& ../apkdiff3.py $APK_OUTPUT '../apks/${APK_FILE}'" \
 			| tee "${LOGFILE}"
 
 # Set exit status
