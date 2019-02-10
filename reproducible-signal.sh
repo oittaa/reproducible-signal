@@ -92,19 +92,6 @@ do
 		continue
 	fi
 
-	# On the first iteration ask if the user wants to install the packages
-	if  [ ! "${PACKAGES}" ]
-	then
-		print_info "The script requires \"${TOOL}\", but it's not installed."
-		read -p "Would you like to install the missing dependencies? [Y/n] " RESPONSE
-		case "${RESPONSE}" in
-			[yY]|"")
-				;;
-			*)
-				error_exit "Aborting."
-				;;
-		esac
-	fi
 	case "${TOOL}" in
 		"docker")
 			DOCKER_NEEDED="YES"
@@ -119,9 +106,14 @@ done
 # Install missing packages
 if [ "${PACKAGES}" ]
 then
+	print_info "The script requires the following packages: ${PACKAGES}"
+	read -p "Would you like to install the missing dependencies? [Y/n] " RESPONSE
+	case "${RESPONSE}" in
+		[yY]|"") ;;
+		*) error_exit "Aborting." ;;
+	esac
 	SUDO=""
 	[ "$(id -u)" -eq 0 ] || SUDO="sudo"
-	print_info "Installing the following packages: ${PACKAGES}"
 	${SUDO} apt -q update
 	${SUDO} apt -yq install ${PACKAGES}
 	if [ "${DOCKER_NEEDED}" ] && [ "${SUDO}" ]

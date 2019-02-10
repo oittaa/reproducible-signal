@@ -2,24 +2,13 @@ dist: xenial
 language: python
 python: 3.7
 
-env:
-  global:
-    - SIGNAL_JSON="https://updates.signal.org/android/latest.json"
-    - CACHE="$HOME/cache"
-
-cache:
-  directories:
-    - $HOME/cache
-
 services:
   - docker
-
-before_install:
-  - travis_retry wget -P "$CACHE" -N -- "$SIGNAL_JSON"
-  - SIGNAL_APK=$(python -c "import json; print(json.loads('$(cat "$CACHE/$(basename -- "$SIGNAL_JSON")")')['url'])") && travis_retry wget -P "$CACHE" -N -- "$SIGNAL_APK" && ln -f "$CACHE/$(basename -- "$SIGNAL_APK")" $HOME/Signal.apk
 
 install:
   - sudo apt-get update -q
   - sudo apt-get install -y aapt adb
+  - git clone https://github.com/NoMore201/googleplay-api.git
+  - pip install googleplay-api
 
-script: travis_wait pytest -x test
+script: travis_wait 40 pytest -x test
