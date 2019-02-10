@@ -1,4 +1,4 @@
-asdfrom tempfile import mkstemp
+from tempfile import mkstemp
 import os
 import pytest
 

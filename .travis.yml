@@ -2,13 +2,15 @@ dist: xenial
 language: python
 python: 3.7
 
+cache:
+  pip: true
+
 services:
   - docker
 
 install:
   - sudo apt-get update -q
   - sudo apt-get install -y aapt adb
-  - git clone https://github.com/NoMore201/googleplay-api.git
-  - pip install googleplay-api
+  - pip install git+https://github.com/NoMore201/googleplay-api.git
 
 script: travis_wait 40 pytest -x test
