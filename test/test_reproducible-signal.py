@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 
 from contextlib import redirect_stdout
+from hashlib import sha256
 from io import StringIO
 import os
 from pathlib import Path
@@ -16,12 +17,22 @@ from apkdiff3 import ApkDiff
 SIGNAL_JSON_URL = "https://updates.signal.org/android/latest.json"
 SIGNAL_DOCID = "org.thoughtcrime.securesms"
 
+def sha256sum(filename):
+    h  = sha256()
+    b  = bytearray(128*1024)
+    mv = memoryview(b)
+    with open(filename, 'rb', buffering=0) as f:
+        for n in iter(lambda : f.readinto(mv), 0):
+            h.update(mv[:n])
+    return h.hexdigest()
+
 def test_download_signal_from_website(signal_apk):
     r = requests.get(SIGNAL_JSON_URL)
     data = r.json()
     r = requests.get(data["url"])
     with open(signal_apk, "wb") as f:
         f.write(r.content)
+    assert data["sha256sum"] == sha256sum(signal_apk)
 
 def test_apkdiff_siganl_apk_itself(signal_apk):
     fd, copy_path = mkstemp()
