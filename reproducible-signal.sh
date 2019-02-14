@@ -179,7 +179,7 @@ print_info "Extracting version number from the APK."
 VERSION=$(aapt dump badging "${APK_DIR}/${APK_FILE}" \
 	| grep -oP "^package:.*versionName='\K[0-9.]+")
 
-print_info "Building a Docker image for Signal."
+print_info "Building a Docker image for Signal version ${VERSION}"
 print_info "This will take some time!"
 wget -O "${IMAGE_BUILD_CONTEXT}/Dockerfile_v${VERSION}" \
 	https://raw.githubusercontent.com/signalapp/Signal-Android/v${VERSION}/Dockerfile
