@@ -210,6 +210,7 @@ docker run \
 		&& cd Signal-Android \
 		&& git checkout --quiet v${VERSION} \
 		&& $GRADLECMD \
+		&& sha256sum $APK_OUTPUT '../apks/${APK_FILE}' \
 		&& ../apkdiff3.py $APK_OUTPUT '../apks/${APK_FILE}'" \
 			| tee "${LOGFILE}"
 
