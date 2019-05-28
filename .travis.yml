@@ -10,7 +10,7 @@ services:
 
 install:
   - sudo apt-get update -q
-  - sudo apt-get install -y aapt adb
+  - sudo apt-get install -y aapt adb protobuf-compiler
   - pip install git+https://github.com/NoMore201/googleplay-api.git
 
 script: travis_wait 40 pytest -x test
