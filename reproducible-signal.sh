@@ -184,6 +184,13 @@ print_info "This will take some time!"
 wget -O "${IMAGE_BUILD_CONTEXT}/Dockerfile_v${VERSION}" \
 	https://raw.githubusercontent.com/signalapp/Signal-Android/v${VERSION}/Dockerfile
 cd "${IMAGE_BUILD_CONTEXT}"
+
+### WORKAROUND FOR BROKEN DOCKER IMAGES
+if grep -q '^FROM ubuntu:17.10' Dockerfile_v${VERSION}
+then
+	sed -i -e 's/^FROM ubuntu:17.10/FROM ubuntu:18.04/' -e '/apt-get install/ s/=\S*//g' Dockerfile_v${VERSION}
+fi
+
 docker build --file Dockerfile_v${VERSION} --tag signal-android .
 [ "${DOCKER_ONLY}" ] && exit 0
 
@@ -192,10 +199,10 @@ print_info "This will take some time!"
 if [ "$RELEASE" = "PLAY" ]
 then
 	GRADLECMD="./gradlew clean assemblePlayRelease -x signProductionPlayRelease"
-	APK_OUTPUT="build/outputs/apk/play/release/Signal-play-release-unsigned-${VERSION}.apk"
+	APK_OUTPUT="build/outputs/apk/play/release/Signal-play-universal-release-unsigned-${VERSION}.apk"
 else
 	GRADLECMD="./gradlew clean assembleWebsiteRelease -x signProductionWebsiteRelease"
-	APK_OUTPUT="build/outputs/apk/website/release/Signal-website-release-unsigned-${VERSION}.apk"
+	APK_OUTPUT="build/outputs/apk/website/release/Signal-website-universal-release-unsigned-${VERSION}.apk"
 fi
 docker run \
 	--name signal \
