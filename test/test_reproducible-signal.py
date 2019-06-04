@@ -82,7 +82,10 @@ def test_reproducible_signal_from_play_store(signal_apk):
     from gpapi.googleplay import GooglePlayAPI, RequestError
     server = GooglePlayAPI()
     server.login(None, None, gsfId, authSubToken)
-    server.log(SIGNAL_DOCID)
+    try:
+        server.log(SIGNAL_DOCID)
+    except RequestError as err:
+        pytest.skip("Couldn't fetch APK information from Play Store: {}".format(err))
     fl = server.download(SIGNAL_DOCID)
     with open(signal_apk, "wb") as apk_file:
         for chunk in fl.get("file").get("data"):
