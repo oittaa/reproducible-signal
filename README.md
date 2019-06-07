@@ -24,7 +24,7 @@ The script might take several minutes to complete. If everything went right and 
 ### Ubuntu 18.04 details
 
 1. You will need around 10GB of free space for Docker images and Signal build process
-2. Required packages can be installed manually `sudo apt install aapt adb docker.io wget`
+2. Required packages can be installed manually `sudo apt install aapt adb docker.io unzip wget`
 3. If you had to install Docker
     1. Add yourself to the group `sudo usermod -aG docker $USER`
     2. Reboot your computer before continuing.
@@ -46,41 +46,6 @@ Many different apps can extract installed APKs. Here's an example how to get the
 6. Tap `Save to Drive`.
 7. Set `Document title` to something like `Signal.apk` and tap `Save`
 8. Now you can download the APK to your computer from Google Drive
-
-## Linux - "I want to do it manually and I know what I'm doing"
-
-```bash
-BASE_DIR="${HOME}/reproducible-signal"
-APK_DIR_FROM_PLAY_STORE="${BASE_DIR}/apk-from-google-play-store"
-IMAGE_BUILD_CONTEXT="${BASE_DIR}/image-build-context"
-mkdir -p -- "${APK_DIR_FROM_PLAY_STORE}" "${IMAGE_BUILD_CONTEXT}"
-APK_PATH=$(adb shell pm path org.thoughtcrime.securesms | grep -oP '^package:\K.*/base.apk$')
-APK_FILE_FROM_PLAY_STORE="Signal-$(date '+%F_%T').apk"
-adb pull \
-  "${APK_PATH}" \
-  "${APK_DIR_FROM_PLAY_STORE}/${APK_FILE_FROM_PLAY_STORE}"
-VERSION=$(aapt dump badging "${APK_DIR_FROM_PLAY_STORE}/${APK_FILE_FROM_PLAY_STORE}" \
-  | grep -oP "^package:.*versionName='\K[0-9.]+")
-wget -O "${IMAGE_BUILD_CONTEXT}/Dockerfile_v${VERSION}" \
-  https://raw.githubusercontent.com/signalapp/Signal-Android/v${VERSION}/Dockerfile
-cd "${IMAGE_BUILD_CONTEXT}"
-docker build --file Dockerfile_v${VERSION} --tag signal-android .
-docker run \
-  --name signal \
-  --rm \
-  --volume "${APK_DIR_FROM_PLAY_STORE}":/signal-build/apk-from-google-play-store \
-  --workdir /signal-build \
-  signal-android \
-  /bin/bash -c \
-    "wget https://raw.githubusercontent.com/oittaa/reproducible-signal/master/apkdiff3.py \
-    && chmod +x apkdiff3.py \
-    && git clone https://github.com/signalapp/Signal-Android.git \
-    && cd Signal-Android \
-    && git checkout --quiet v${VERSION} \
-    && ./gradlew clean assemblePlayRelease -x signProductionPlayRelease \
-    && ../apkdiff3.py build/outputs/apk/play/release/Signal-play-release-unsigned-${VERSION}.apk \
-      '../apk-from-google-play-store/${APK_FILE_FROM_PLAY_STORE}'"
-```
 
 ## Windows / macOS / other
 

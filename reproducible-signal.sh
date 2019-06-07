@@ -22,7 +22,7 @@ set -e
 BASE_DIR="${HOME}/reproducible-signal"
 APK_DIR="${BASE_DIR}/apk-from-google-play-store"
 IMAGE_BUILD_CONTEXT="${BASE_DIR}/image-build-context"
-NEEDED_TOOLS="aapt adb docker wget"
+NEEDED_TOOLS="aapt adb docker unzip wget"
 
 display_help() {
 	printf "Usage: %s [OPTION]... [FILE]\n\n" "$0"
@@ -194,15 +194,22 @@ fi
 docker build --file Dockerfile_v${VERSION} --tag signal-android .
 [ "${DOCKER_ONLY}" ] && exit 0
 
+print_info "Identifying ABI."
+ABI=$(unzip -l "${APK_DIR}/${APK_FILE}" | grep -oP '\slib/\K[a-z0-9_\-]*' | sort -u)
+if [ 1 -ne $(printf "$ABI" | wc -w) ]
+then
+	ABI="universal"
+fi
+print_info "ABI: ${ABI}"
 print_info "Compiling Signal inside a container."
 print_info "This will take some time!"
 if [ "$RELEASE" = "PLAY" ]
 then
 	GRADLECMD="./gradlew clean assemblePlayRelease -x signProductionPlayRelease"
-	APK_OUTPUT="build/outputs/apk/play/release/Signal-play-universal-release-unsigned-${VERSION}.apk"
+	APK_OUTPUT="build/outputs/apk/play/release/Signal-play-${ABI}-release-unsigned-${VERSION}.apk"
 else
 	GRADLECMD="./gradlew clean assembleWebsiteRelease -x signProductionWebsiteRelease"
-	APK_OUTPUT="build/outputs/apk/website/release/Signal-website-universal-release-unsigned-${VERSION}.apk"
+	APK_OUTPUT="build/outputs/apk/website/release/Signal-website-${ABI}-release-unsigned-${VERSION}.apk"
 fi
 docker run \
 	--name signal \
