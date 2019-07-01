@@ -218,14 +218,12 @@ docker run \
 	--workdir /signal-build \
 	signal-android \
 	/bin/bash -c \
-		"wget https://raw.githubusercontent.com/oittaa/reproducible-signal/master/apkdiff3.py \
-		&& chmod +x apkdiff3.py \
-		&& git clone https://github.com/signalapp/Signal-Android.git \
+		"git clone https://github.com/signalapp/Signal-Android.git \
 		&& cd Signal-Android \
 		&& git checkout --quiet v${VERSION} \
 		&& $GRADLECMD \
 		&& sha256sum $APK_OUTPUT '../apks/${APK_FILE}' \
-		&& ../apkdiff3.py $APK_OUTPUT '../apks/${APK_FILE}'" \
+		&& ./apkdiff/apkdiff.py $APK_OUTPUT '../apks/${APK_FILE}'" \
 			| tee "${LOGFILE}"
 
 # Set exit status
