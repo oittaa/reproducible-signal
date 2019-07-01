@@ -81,7 +81,10 @@ def test_reproducible_signal_from_play_store(signal_apk):
 
     from gpapi.googleplay import GooglePlayAPI, RequestError
     server = GooglePlayAPI()
-    server.login(None, None, gsfId, authSubToken)
+    try:
+        server.login(None, None, gsfId, authSubToken)
+    except RequestError as err:
+        pytest.skip("Couldn't login to Play Store: {}".format(err))
     try:
         server.log(SIGNAL_DOCID)
     except RequestError as err:
