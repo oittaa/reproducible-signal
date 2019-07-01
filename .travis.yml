@@ -12,7 +12,6 @@ install:
   - sudo apt-get update -q
   - sudo apt-get install -y aapt adb protobuf-compiler
   - git clone https://github.com/NoMore201/googleplay-api.git
-  - sed -i 's/"--proto_path=" + CURRENT_DIR,/"--proto_path=.",/' googleplay-api/setup.py
   - pip install ./googleplay-api
 
 script: travis_wait 40 pytest -x test
