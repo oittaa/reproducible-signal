@@ -206,10 +206,10 @@ print_info "This will take some time!"
 if [ "$RELEASE" = "PLAY" ]
 then
 	GRADLECMD="./gradlew clean assemblePlayRelease -x signProductionPlayRelease"
-	APK_OUTPUT="build/outputs/apk/play/release/Signal-play-${ABI}-release-unsigned-${VERSION}.apk"
+	APK_OUTPUT="app/build/outputs/apk/play/release/Signal-play-${ABI}-release-unsigned-${VERSION}.apk"
 else
 	GRADLECMD="./gradlew clean assembleWebsiteRelease -x signProductionWebsiteRelease"
-	APK_OUTPUT="build/outputs/apk/website/release/Signal-website-${ABI}-release-unsigned-${VERSION}.apk"
+	APK_OUTPUT="app/build/outputs/apk/website/release/Signal-website-${ABI}-release-unsigned-${VERSION}.apk"
 fi
 docker run \
 	--name signal \
