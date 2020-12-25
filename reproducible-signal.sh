@@ -181,17 +181,13 @@ VERSION=$(aapt dump badging "${APK_DIR}/${APK_FILE}" \
 
 print_info "Building a Docker image for Signal version ${VERSION}"
 print_info "This will take some time!"
-wget -O "${IMAGE_BUILD_CONTEXT}/Dockerfile_v${VERSION}" \
-	https://raw.githubusercontent.com/signalapp/Signal-Android/v${VERSION}/Dockerfile
 cd "${IMAGE_BUILD_CONTEXT}"
+test -d Signal-Android && cd Signal-Android || (git clone https://github.com/signalapp/Signal-Android.git && cd Signal-Android)
+git checkout --quiet v${VERSION} \
+	&& cd reproducible-builds \
+	&& docker build -t signal-android . \
+	&& cd ..
 
-### WORKAROUND FOR BROKEN DOCKER IMAGES
-if grep -q '^FROM ubuntu:17.10' Dockerfile_v${VERSION}
-then
-	sed -i -e 's/^FROM ubuntu:17.10/FROM ubuntu:18.04/' -e '/apt-get install/ s/=\S*//g' Dockerfile_v${VERSION}
-fi
-
-docker build --file Dockerfile_v${VERSION} --tag signal-android .
 [ "${DOCKER_ONLY}" ] && exit 0
 
 print_info "Identifying ABI."
@@ -205,26 +201,11 @@ print_info "Compiling Signal inside a container."
 print_info "This will take some time!"
 if [ "$RELEASE" = "PLAY" ]
 then
-	GRADLECMD="./gradlew clean assemblePlayRelease -x signProductionPlayRelease"
-	APK_OUTPUT="app/build/outputs/apk/play/release/Signal-play-${ABI}-release-unsigned-${VERSION}.apk"
+	APK_OUTPUT="app/build/outputs/apk/playProd/release/Signal-Android-play-prod-${ABI}-release-unsigned-${VERSION}.apk"
+	docker run --rm -v "$(pwd):/project" -w /project signal-android ./gradlew clean assemblePlayProdRelease
 else
-	GRADLECMD="./gradlew clean assembleWebsiteRelease -x signProductionWebsiteRelease"
-	APK_OUTPUT="app/build/outputs/apk/website/release/Signal-website-${ABI}-release-unsigned-${VERSION}.apk"
+	APK_OUTPUT="app/build/outputs/apk/websiteProd/release/Signal-Android-website-prod-${ABI}-release-unsigned-${VERSION}.apk"
+	docker run --rm -v "$(pwd):/project" -w /project signal-android ./gradlew clean assembleWebsiteProdRelease
 fi
-docker run \
-	--name signal \
-	--rm \
-	--volume "${APK_DIR}":/signal-build/apks \
-	--workdir /signal-build \
-	signal-android \
-	/bin/bash -c \
-		"git clone https://github.com/signalapp/Signal-Android.git \
-		&& cd Signal-Android \
-		&& git checkout --quiet v${VERSION} \
-		&& $GRADLECMD \
-		&& sha256sum $APK_OUTPUT '../apks/${APK_FILE}' \
-		&& ./apkdiff/apkdiff.py $APK_OUTPUT '../apks/${APK_FILE}'" \
-			| tee "${LOGFILE}"
 
-# Set exit status
-tail -n 1 "${LOGFILE}" | grep -q "^APKs match"
+python3 reproducible-builds/apkdiff/apkdiff.py "$APK_OUTPUT" "${APK_DIR}/${APK_FILE}"
