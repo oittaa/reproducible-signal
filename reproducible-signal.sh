@@ -22,7 +22,7 @@ set -e
 BASE_DIR="${HOME}/reproducible-signal"
 APK_DIR="${BASE_DIR}/apk-from-google-play-store"
 IMAGE_BUILD_CONTEXT="${BASE_DIR}/image-build-context"
-NEEDED_TOOLS="aapt adb docker unzip wget"
+NEEDED_TOOLS="aapt adb diffoscope docker unzip wget"
 APKDIFF=$(realpath apkdiff3.py)
 
 display_help() {
@@ -216,4 +216,5 @@ fi
 
 # FIXME https://github.com/signalapp/Signal-Android/pull/11134
 # python3 reproducible-builds/apkdiff/apkdiff.py "$APK_OUTPUT" "${APK_DIR}/${APK_FILE}"
+diffoscope "$APK_OUTPUT" "${APK_DIR}/${APK_FILE}" || print_info "diffoscope detected differences."
 python3 "${APKDIFF}" "$APK_OUTPUT" "${APK_DIR}/${APK_FILE}"

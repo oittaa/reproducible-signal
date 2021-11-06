@@ -22,7 +22,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update -q
-          sudo apt-get install -y aapt adb protobuf-compiler
+          sudo apt-get install -y aapt adb diffoscope protobuf-compiler
           pip install pytest requests
       - name: Run tests
         run: pytest -x test
