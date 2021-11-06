@@ -5,8 +5,7 @@ from zipfile import ZipFile
 
 class ApkDiff:
 
-    # "resources.arsc" is on the list due to a bug. https://issuetracker.google.com/issues/110237303
-    IGNORE_FILES = ["resources.arsc", "META-INF/MANIFEST.MF", "META-INF/SIGNAL_S.RSA", "META-INF/SIGNAL_S.SF"]
+    IGNORE_FILES = ["META-INF/MANIFEST.MF", "META-INF/SIGNAL_S.RSA", "META-INF/SIGNAL_S.SF", "META-INF/CERTIFIC.RSA", "META-INF/CERTIFIC.SF"]
 
     def compare(self, sourceApk, destinationApk):
         sourceZip      = ZipFile(sourceApk, 'r')
