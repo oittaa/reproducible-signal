@@ -23,7 +23,7 @@ jobs:
         run: |
           sudo apt-get update -q
           sudo apt-get install -y aapt adb protobuf-compiler
-          pip install pytest
+          pip install pytest requests
       - name: Build
         run: |
           pytest -x test
