@@ -23,6 +23,7 @@ BASE_DIR="${HOME}/reproducible-signal"
 APK_DIR="${BASE_DIR}/apk-from-google-play-store"
 IMAGE_BUILD_CONTEXT="${BASE_DIR}/image-build-context"
 NEEDED_TOOLS="aapt adb docker unzip wget"
+APKDIFF=$(realpath apkdiff3.py)
 
 display_help() {
 	printf "Usage: %s [OPTION]... [FILE]\n\n" "$0"
@@ -184,6 +185,7 @@ print_info "This will take some time!"
 cd "${IMAGE_BUILD_CONTEXT}"
 test -d Signal-Android && cd Signal-Android || (git clone https://github.com/signalapp/Signal-Android.git && cd Signal-Android)
 git checkout --quiet v${VERSION} \
+    && sed -i "s/commandLine 'git', 'rev-parse', '--short', 'HEAD'/commandLine 'git', 'rev-parse', '--short=7', 'HEAD'/" app/build.gradle \
 	&& cd reproducible-builds \
 	&& docker build -t signal-android . \
 	&& cd ..
@@ -199,6 +201,10 @@ fi
 print_info "ABI: ${ABI}"
 print_info "Compiling Signal inside a container."
 print_info "This will take some time!"
+
+# FIXME https://github.com/signalapp/Signal-Android/pull/11134
+sed -i "s/commandLine 'git', 'rev-parse', '--short', 'HEAD'/commandLine 'git', 'rev-parse', '--short=7', 'HEAD'/" app/build.gradle
+
 if [ "$RELEASE" = "PLAY" ]
 then
 	APK_OUTPUT="app/build/outputs/apk/playProd/release/Signal-Android-play-prod-${ABI}-release-unsigned-${VERSION}.apk"
@@ -208,4 +214,6 @@ else
 	docker run --rm -v "$(pwd):/project" -w /project signal-android ./gradlew clean assembleWebsiteProdRelease
 fi
 
-python3 reproducible-builds/apkdiff/apkdiff.py "$APK_OUTPUT" "${APK_DIR}/${APK_FILE}"
+# FIXME https://github.com/signalapp/Signal-Android/pull/11134
+# python3 reproducible-builds/apkdiff/apkdiff.py "$APK_OUTPUT" "${APK_DIR}/${APK_FILE}"
+python3 "${APKDIFF}" "$APK_OUTPUT" "${APK_DIR}/${APK_FILE}"
