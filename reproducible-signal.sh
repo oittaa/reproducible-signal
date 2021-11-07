@@ -216,5 +216,7 @@ fi
 
 # FIXME https://github.com/signalapp/Signal-Android/pull/11134
 # python3 reproducible-builds/apkdiff/apkdiff.py "$APK_OUTPUT" "${APK_DIR}/${APK_FILE}"
-diffoscope "$APK_OUTPUT" "${APK_DIR}/${APK_FILE}" || print_info "diffoscope detected differences."
-python3 "${APKDIFF}" "$APK_OUTPUT" "${APK_DIR}/${APK_FILE}"
+
+#diffoscope "$APK_OUTPUT" "${APK_DIR}/${APK_FILE}" || print_info "diffoscope detected differences."
+#python3 "${APKDIFF}" "$APK_OUTPUT" "${APK_DIR}/${APK_FILE}"
+cp "$APK_OUTPUT" "${HOME}/signal-website.apk"
