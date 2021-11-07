@@ -28,5 +28,5 @@ jobs:
         run: pytest -x test
       - uses: actions/upload-artifact@v2
         with:
-          name: signal-website.apk
-          path: signal-website.apk
+          name: signal.apk
+          path: /tmp/signal.apk
